@@ -2,29 +2,32 @@ package Router
 
 import (
 	"net/http"
+	"strings"
 )
 
 type IRouter interface {
 	ServeHTTP(http.ResponseWriter, *http.Request)
+	HandlerFunc([]string, string, http.HandlerFunc)
 	Mount(string, IRouter)
 	Exec([]string, http.ResponseWriter, *http.Request) bool
-	Get(string, func(http.ResponseWriter, *http.Request))
-	Head(string, func(http.ResponseWriter, *http.Request))
-	Post(string, func(http.ResponseWriter, *http.Request))
-	Put(string, func(http.ResponseWriter, *http.Request))
-	Patch(string, func(http.ResponseWriter, *http.Request))
-	Delete(string, func(http.ResponseWriter, *http.Request))
-	Trace(string, func(http.ResponseWriter, *http.Request))
-	All(string, func(http.ResponseWriter, *http.Request))
+	GET(string, http.HandlerFunc)
+	POST(string, http.HandlerFunc)
+	PUT(string, http.HandlerFunc)
+	DELETE(string, http.HandlerFunc)
+	PATCH(string, http.HandlerFunc)
+	HEAD(string, http.HandlerFunc)
+	OPTIONS(string, OptionsHandler)
+	ALL(string, http.HandlerFunc)
 }
 type Options struct {
-	Handler ErrorHandler
+	Handler EventHandler
 }
-type ErrorHandler interface {
-	Forbidden(http.ResponseWriter, *http.Request)      //403
-	NotFound(http.ResponseWriter, *http.Request)       //404
-	MethodNotAllow(http.ResponseWriter, *http.Request) //405
-	InternalError(http.ResponseWriter, *http.Request)  //500
+type EventHandler interface {
+	Forbidden(http.ResponseWriter, *http.Request)                //403
+	NotFound(http.ResponseWriter, *http.Request)                 //404
+	MethodNotAllow([]string, http.ResponseWriter, *http.Request) //405
+	InternalError(http.ResponseWriter, *http.Request)            //500
+	Options([]string, http.ResponseWriter, *http.Request)        //OPTIONS Request
 }
 type DefaultHandler struct {
 }
@@ -35,9 +38,17 @@ func (DefaultHandler) Forbidden(res http.ResponseWriter, req *http.Request) {
 func (DefaultHandler) NotFound(res http.ResponseWriter, req *http.Request) {
 	http.Error(res, http.StatusText(404), 404)
 }
-func (DefaultHandler) MethodNotAllow(res http.ResponseWriter, req *http.Request) {
+func (DefaultHandler) MethodNotAllow(allows []string, res http.ResponseWriter, req *http.Request) {
+	allows = append(allows, "OPTIONS")
+	res.Header().Set("Allow", strings.Join(allows, ", "))
 	http.Error(res, http.StatusText(405), 405)
 }
 func (DefaultHandler) InternalError(res http.ResponseWriter, req *http.Request) {
 	http.Error(res, http.StatusText(500), 500)
 }
+func (DefaultHandler) Options(allows []string, res http.ResponseWriter, req *http.Request) {
+	allows = append(allows, "OPTIONS")
+	res.Header().Set("Allow", strings.Join(allows, ", "))
+}
+
+type OptionsHandler func([]string, http.ResponseWriter, *http.Request)
