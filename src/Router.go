@@ -16,6 +16,12 @@ func (r router) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	if r.routes == nil || r.subRouter == nil { //always not hit
 		panic("Router not initialized")
 	}
+	defer func() {
+		err := recover()
+		if err != nil {
+			r.option.Handler.InternalError(res, req)
+		}
+	}()
 	path := req.URL.Path
 	paths := strings.Split(path, "/")
 	paths = append(paths[:0], paths[1:]...)
