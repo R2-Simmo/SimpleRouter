@@ -6,18 +6,18 @@ import (
 )
 
 type IRouter interface {
-	ServeHTTP(http.ResponseWriter, *http.Request)
-	HandlerFunc([]string, string, http.HandlerFunc)
-	Mount(string, IRouter)
-	Exec([]string, http.ResponseWriter, *http.Request) bool
-	GET(string, http.HandlerFunc)
-	POST(string, http.HandlerFunc)
-	PUT(string, http.HandlerFunc)
-	DELETE(string, http.HandlerFunc)
-	PATCH(string, http.HandlerFunc)
-	HEAD(string, http.HandlerFunc)
-	OPTIONS(string, OptionsHandler)
-	ALL(string, http.HandlerFunc)
+	ServeHTTP(http.ResponseWriter, *http.Request)           //Inherit from http.Handler
+	HandlerFunc([]string, string, http.HandlerFunc)         //Original request route method
+	Mount(string, IRouter)                                  //Mount sub router
+	Exec([]string, http.ResponseWriter, *http.Request) bool //Internal method
+	GET(string, http.HandlerFunc)                           //Handle GET request
+	POST(string, http.HandlerFunc)                          //Handle POST request
+	PUT(string, http.HandlerFunc)                           //Handle PUT request
+	DELETE(string, http.HandlerFunc)                        //Handle DELETE request
+	PATCH(string, http.HandlerFunc)                         //Handle PATCH request
+	HEAD(string, http.HandlerFunc)                          //Handle HEAD request
+	OPTIONS(string, OptionsHandler)                         //Handle OPTIONS request
+	ALL(string, http.HandlerFunc)                           //Handle all request method(exclude OPTIONS)
 }
 type Options struct {
 	Handler EventHandler
