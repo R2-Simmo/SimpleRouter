@@ -54,7 +54,11 @@ func (r router) Mount(path string, router IRouter) {
 	paths := strings.Split(path, "/") //多级路由分割
 	paths = append(paths[:0], paths[1:]...)
 	if len(paths) == 1 {
+		subRouter, exist := r.subRouter[paths[0]]
 		r.subRouter[paths[0]] = router //单一层级
+		if exist {                     //存在已挂载的路由
+			router.Mount("/", subRouter) //挂载为根路由
+		}
 	} else {
 		subRouter, exist := r.subRouter[paths[0]]
 		if !exist { //检查子级路由是否存在
@@ -62,7 +66,7 @@ func (r router) Mount(path string, router IRouter) {
 			r.subRouter[paths[0]] = subRouter
 		}
 		paths = append(paths[:0], paths[1:]...)
-		subRouter.Mount("/"+strings.Join(paths, "/"), subRouter)
+		subRouter.Mount("/"+strings.Join(paths, "/"), router)
 	}
 }
 
@@ -72,7 +76,7 @@ func (r router) Exec(path []string, res http.ResponseWriter, req *http.Request) 
 		if exist {
 			handler, flag := handlers[req.Method] //映射到实现方法
 			if flag {
-				handler(res, req)
+				handler(res, req) //注册的处理函数
 			} else {
 				keys := make([]string, 0, len(handlers))
 				for k := range handlers {
@@ -84,12 +88,17 @@ func (r router) Exec(path []string, res http.ResponseWriter, req *http.Request) 
 						options = r.option.Handler.Options
 					}
 					options(keys, res, req)
-					return true
+					return true //OPTIONS请求自动处理&拦截
 				}
-				r.option.Handler.MethodNotAllow(keys, res, req)
+				r.option.Handler.MethodNotAllow(keys, res, req) //405状态码自动处理&拦截
+			}
+			return true
+		} else {
+			subRouter, ok := r.subRouter[""] //检查根目录是否挂载了路由
+			if ok {
+				return subRouter.Exec(path, res, req) //转发原始参数
 			}
 		}
-		return exist
 	} else { //非本级路由
 		route, exist := r.subRouter[path[0]]
 		paths := append(path[:0], path[1:]...)
